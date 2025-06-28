@@ -93,20 +93,27 @@
 		</header>
 		<main>
 			<form id="signupForm">
-				<input type="email" name="email" placeholder="이메일" required />
+				<input
+					type="email"
+					name="email"
+					id="email"
+					placeholder="이메일"
+					required
+				/>
 				<input
 					type="password"
 					name="password"
+					id="password"
 					placeholder="비밀번호"
 					required
 				/>
 				<input type="text" name="name" placeholder="이름" required />
-				<select name="role" required>
+				<select name="role" id="role" required>
 					<option value="">역할 선택</option>
 					<option value="mentor">멘토</option>
 					<option value="mentee">멘티</option>
 				</select>
-				<button type="submit" class="btn">회원가입</button>
+				<button type="submit" class="btn" id="signup">회원가입</button>
 				<div class="error" id="errorMsg"></div>
 			</form>
 			<div style="margin-top: 1.5rem">
