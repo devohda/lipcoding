@@ -87,7 +87,7 @@
 		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
 		<script>
 			// 로그인 정보 표시 및 보호
-			window.addEventListener("DOMContentLoaded", function () {
+			window.addEventListener("DOMContentLoaded", async function () {
 				const token = localStorage.getItem("token");
 				const btns = [
 					document.querySelector('a[href="profile.html"]'),
@@ -103,29 +103,9 @@
 					location.href = "login.html";
 					return;
 				}
+				let payload;
 				try {
-					const payload = JSON.parse(atob(token.split(".")[1]));
-					let displayName = payload.name;
-					if (!displayName && payload.email) {
-						displayName = payload.email.split("@")[0];
-					}
-					document.getElementById("welcome").innerHTML = `<strong>${
-						displayName || "사용자"
-					}</strong>님, 환영합니다!<br><span style='color:#4ea8de;'>(${
-						payload.role === "mentor" ? "멘토" : "멘티"
-					})</span>`;
-					// 멘티일 때만 '멘토 찾기' 버튼 보이기
-					const mentorBtn = document.querySelector('a[href="mentors.html"]');
-					if (payload.role !== "mentee" && mentorBtn) {
-						mentorBtn.style.display = "none";
-					}
-					// 멘토일 때만 '매칭 요청함' 버튼 보이기
-					const reqBtn = document.querySelector(
-						'a[href="requests-incoming.html"]'
-					);
-					if (payload.role !== "mentor" && reqBtn) {
-						reqBtn.style.display = "none";
-					}
+					payload = JSON.parse(atob(token.split(".")[1]));
 				} catch (e) {
 					btns.forEach((btn) => {
 						if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
@@ -133,6 +113,33 @@
 					alert("잘못된 토큰입니다. 다시 로그인 해주세요.");
 					localStorage.removeItem("token");
 					location.href = "login.html";
+					return;
+				}
+				// 최신 이름/역할은 API에서 가져옴
+				try {
+					const res = await fetch("http://localhost:8080/api/me", {
+						headers: { Authorization: "Bearer " + token },
+					});
+					if (!res.ok) throw new Error();
+					const data = await res.json();
+					document.getElementById("welcome").innerHTML = `<strong>${
+						data.profile.name || "사용자"
+					}</strong>님, 환영합니다!<br><span style='color:#4ea8de;'>(${
+						data.role === "mentor" ? "멘토" : "멘티"
+					})</span>`;
+					// 멘티일 때만 '멘토 찾기' 버튼 보이기
+					const mentorBtn = document.querySelector('a[href="/mentors"]');
+					if (data.role !== "mentee" && mentorBtn) {
+						mentorBtn.style.display = "none";
+					}
+					// 멘토일 때만 '매칭 요청함' 버튼 보이기
+					const reqBtn = document.querySelector('a[href="/requests-incoming"]');
+					if (data.role !== "mentor" && reqBtn) {
+						reqBtn.style.display = "none";
+					}
+				} catch {
+					document.getElementById("welcome").innerText =
+						"프로필 정보를 불러올 수 없습니다.";
 				}
 				document.getElementById("logout-btn").onclick = function (e) {
 					e.preventDefault();

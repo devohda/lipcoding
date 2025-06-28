@@ -7,6 +7,27 @@ const app = express();
 const PORT = 8080;
 const SECRET = "secret-key";
 const { v4: uuidv4 } = require("uuid"); // JWT jti용
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+
+// 프로필 이미지 업로드용 multer 설정
+const upload = multer({
+	storage: multer.diskStorage({
+		destination: function (req, file, cb) {
+			cb(null, path.join(__dirname, "uploads/profile"));
+		},
+		filename: function (req, file, cb) {
+			const ext = path.extname(file.originalname);
+			cb(null, `user_${req.user.sub}${ext}`);
+		},
+	}),
+	limits: { fileSize: 1024 * 1024 }, // 1MB 제한
+	fileFilter: (req, file, cb) => {
+		if (["image/jpeg", "image/png"].includes(file.mimetype)) cb(null, true);
+		else cb(new Error("jpg 또는 png 파일만 허용됩니다."));
+	},
+});
 
 const swaggerDefinition = {
 	openapi: "3.0.0",
@@ -578,11 +599,34 @@ app.get("/api/images/:role/:id", auth, (req, res) => {
 	if (role !== "mentor" && role !== "mentee") {
 		return res.status(400).json({ error: "Invalid role" });
 	}
-	const url =
-		role === "mentor"
-			? "https://placehold.co/500x500.jpg?text=MENTOR"
-			: "https://placehold.co/500x500.jpg?text=MENTEE";
-	res.redirect(url);
+	db.get(
+		"SELECT imageUrl FROM users WHERE id = ? AND role = ?",
+		[id, role],
+		(err, row) => {
+			if (!row || !row.imageUrl) {
+				const url =
+					role === "mentor"
+						? "https://placehold.co/500x500.jpg?text=MENTOR"
+						: "https://placehold.co/500x500.jpg?text=MENTEE";
+				return res.redirect(url);
+			}
+			if (row.imageUrl.startsWith("/uploads/profile/")) {
+				const filePath = path.join(__dirname, row.imageUrl);
+				fs.access(filePath, fs.constants.F_OK, (err) => {
+					if (err) {
+						const url =
+							role === "mentor"
+								? "https://placehold.co/500x500.jpg?text=MENTOR"
+								: "https://placehold.co/500x500.jpg?text=MENTEE";
+						return res.redirect(url);
+					}
+					res.sendFile(filePath);
+				});
+			} else {
+				res.redirect(row.imageUrl);
+			}
+		}
+	);
 });
 
 // 프로필 수정 (PUT /api/profile)
@@ -630,6 +674,74 @@ app.put("/api/profile", auth, (req, res) => {
 					profile,
 				});
 			});
+		}
+	);
+});
+
+// 프로필 이미지 업로드 (POST /api/me/image)
+app.post("/api/me/image", auth, upload.single("profile"), (req, res) => {
+	if (!req.file) {
+		return res.status(400).json({ error: "파일이 업로드되지 않았습니다." });
+	}
+	const ext = path.extname(req.file.filename);
+	const imageUrl = `/uploads/profile/${req.file.filename}`;
+	db.run(
+		"UPDATE users SET imageUrl = ? WHERE id = ?",
+		[imageUrl, req.user.sub],
+		function (err) {
+			if (err) return res.status(500).json({ error: "DB error" });
+			res.json({ message: "이미지 업로드 성공", imageUrl });
+		}
+	);
+});
+
+// 업로드된 프로필 이미지 제공
+app.get("/uploads/profile/:filename", (req, res) => {
+	const filePath = path.join(__dirname, "uploads/profile", req.params.filename);
+	fs.access(filePath, fs.constants.F_OK, (err) => {
+		if (err) {
+			return res
+				.status(404)
+				.sendFile(
+					path.join(__dirname, "..", "frontend", "profile-placeholder.png")
+				);
+		}
+		res.sendFile(filePath);
+	});
+});
+
+// /api/images/:role/:id에서 실제 업로드 이미지 제공
+app.get("/api/images/:role/:id", auth, (req, res) => {
+	const { role, id } = req.params;
+	if (role !== "mentor" && role !== "mentee") {
+		return res.status(400).json({ error: "Invalid role" });
+	}
+	db.get(
+		"SELECT imageUrl FROM users WHERE id = ? AND role = ?",
+		[id, role],
+		(err, row) => {
+			if (!row || !row.imageUrl) {
+				const url =
+					role === "mentor"
+						? "https://placehold.co/500x500.jpg?text=MENTOR"
+						: "https://placehold.co/500x500.jpg?text=MENTEE";
+				return res.redirect(url);
+			}
+			if (row.imageUrl.startsWith("/uploads/profile/")) {
+				const filePath = path.join(__dirname, row.imageUrl);
+				fs.access(filePath, fs.constants.F_OK, (err) => {
+					if (err) {
+						const url =
+							role === "mentor"
+								? "https://placehold.co/500x500.jpg?text=MENTOR"
+								: "https://placehold.co/500x500.jpg?text=MENTEE";
+						return res.redirect(url);
+					}
+					res.sendFile(filePath);
+				});
+			} else {
+				res.redirect(row.imageUrl);
+			}
 		}
 	);
 });
