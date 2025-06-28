@@ -117,7 +117,7 @@
 				<div class="error" id="errorMsg"></div>
 			</form>
 			<div style="margin-top: 1.5rem">
-				<a href="index.html">메인으로</a>
+				<a href="/">메인으로</a>
 			</div>
 		</main>
 		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
@@ -139,7 +139,7 @@
 				const result = await res.json();
 				if (res.ok) {
 					alert("회원가입이 완료되었습니다!");
-					window.location.href = "index.html";
+					window.location.href = "/";
 				} else {
 					document.getElementById("errorMsg").innerText =
 						result.error || "회원가입 실패";

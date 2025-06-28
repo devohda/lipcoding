@@ -45,6 +45,9 @@ app.post("/api/signup", (req, res) => {
 	if (!email || !password || !name || !role || !emailRegex.test(email)) {
 		return res.status(400).json({ error: "Invalid payload" });
 	}
+	if (role !== "mentor" && role !== "mentee") {
+		return res.status(400).json({ error: "Invalid role" });
+	}
 	db.get("SELECT id FROM users WHERE email = ?", [email], (err, row) => {
 		if (row) return res.status(400).json({ error: "Email already exists" });
 		db.run(
@@ -69,7 +72,7 @@ app.post("/api/signup", (req, res) => {
 app.post("/api/login", (req, res) => {
 	const { email, password } = req.body;
 	if (!email || !password) {
-		return res.status(400).json({ error: "Invalid payload" });
+		return res.status(401).json({ error: "Unauthorized" });
 	}
 	db.get(
 		"SELECT * FROM users WHERE email = ? AND password = ?",
@@ -218,7 +221,7 @@ app.get("/api/match-requests/incoming", auth, (req, res) => {
 	if (req.user.role !== "mentor")
 		return res.status(403).json({ error: "멘토만 조회할 수 있습니다." });
 	db.all(
-		`SELECT mr.id, mr.menteeId, u.name as menteeName, u.email as menteeEmail, mr.message, mr.status
+		`SELECT mr.id, mr.mentorId, mr.menteeId, u.name as menteeName, u.email as menteeEmail, mr.message, mr.status
 		 FROM match_requests mr
 		 JOIN users u ON mr.menteeId = u.id
 		 WHERE mr.mentorId = ?
@@ -226,7 +229,11 @@ app.get("/api/match-requests/incoming", auth, (req, res) => {
 		[req.user.sub],
 		(err, rows) => {
 			if (err) return res.status(500).json({ error: "DB error" });
-			res.json(rows);
+			const result = rows.map((row) => ({
+				...row,
+				mentorId: Number(req.user.sub),
+			}));
+			res.json(result);
 		}
 	);
 });
@@ -583,6 +590,9 @@ app.put("/api/profile", auth, (req, res) => {
 	const { id, name, role, bio, image, skills } = req.body;
 	if (!id || !name || !role || !bio) {
 		return res.status(400).json({ error: "Invalid payload" });
+	}
+	if (role !== "mentor" && role !== "mentee") {
+		return res.status(400).json({ error: "Invalid role" });
 	}
 	if (String(req.user.sub) !== String(id)) {
 		return res.status(401).json({ error: "Unauthorized" });

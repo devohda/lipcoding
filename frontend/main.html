@@ -78,9 +78,9 @@
 		<main>
 			<div id="welcome"></div>
 			<div style="margin-top: 2rem">
-				<a href="profile.html" class="btn">내 프로필</a>
-				<a href="mentors.html" class="btn">멘토 찾기</a>
-				<a href="requests-incoming.html" class="btn">매칭 요청함</a>
+				<a href="/profile" class="btn">내 프로필</a>
+				<a href="/mentors" class="btn">멘토 찾기</a>
+				<a href="/requests-incoming" class="btn">매칭 요청함</a>
 				<a href="#" class="btn" id="logout-btn">로그아웃</a>
 			</div>
 		</main>
@@ -137,7 +137,7 @@
 				document.getElementById("logout-btn").onclick = function (e) {
 					e.preventDefault();
 					localStorage.removeItem("token");
-					location.href = "index.html";
+					location.href = "/";
 				};
 			});
 		</script>
