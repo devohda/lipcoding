@@ -45,7 +45,8 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(express.json());
+app.use(express.json({ limit: "200mb" }));
+app.use(express.urlencoded({ extended: true, limit: "200mb" }));
 // CORS 허용 (프론트엔드 3000번 포트)
 app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "http://localhost:3000");
