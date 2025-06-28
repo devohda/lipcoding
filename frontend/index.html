@@ -85,8 +85,9 @@
 				AC팀 스타일의 심플한 CSS와 함께<br />
 				멘토-멘티 매칭 서비스를 시작해보세요!
 			</div>
-			<a href="login.html" class="btn">로그인</a>
+			<a href="login.html" class="btn" id="login-btn">로그인</a>
 			<a href="signup.html" class="btn">회원가입</a>
+			<a href="main.html" class="btn" id="go-main-btn">메인으로</a>
 
 			<!-- 멘티 전용 멘토 검색/리스트/스케줄 UI -->
 			<section
@@ -115,23 +116,34 @@
 			// 로그인 후 멘티일 때만 멘토 검색 UI 노출
 			window.addEventListener("DOMContentLoaded", function () {
 				const token = localStorage.getItem("token");
-				if (!token) return;
-				try {
-					const payload = JSON.parse(atob(token.split(".")[1]));
-					if (payload.role === "mentee") {
-						document.getElementById("mentor-search-section").style.display =
-							"block";
-						loadMentorList();
-						// 검색/정렬 이벤트
-						document.getElementById("mentor-search-btn").onclick = function () {
-							const keyword = document.getElementById(
-								"mentor-search-keyword"
-							).value;
-							const sort = document.getElementById("mentor-sort").value;
-							loadMentorList(keyword, sort);
-						};
-					}
-				} catch (e) {}
+				const loginBtn = document.getElementById("login-btn");
+				if (token) {
+					// 로그인 상태: 로그인 → 로그아웃 버튼으로 변경
+					loginBtn.textContent = "로그아웃";
+					loginBtn.href = "#";
+					loginBtn.onclick = function (e) {
+						e.preventDefault();
+						localStorage.removeItem("token");
+						location.reload();
+					};
+					try {
+						const payload = JSON.parse(atob(token.split(".")[1]));
+						if (payload.role === "mentee") {
+							document.getElementById("mentor-search-section").style.display =
+								"block";
+							loadMentorList();
+							// 검색/정렬 이벤트
+							document.getElementById("mentor-search-btn").onclick =
+								function () {
+									const keyword = document.getElementById(
+										"mentor-search-keyword"
+									).value;
+									const sort = document.getElementById("mentor-sort").value;
+									loadMentorList(keyword, sort);
+								};
+						}
+					} catch (e) {}
+				}
 			});
 
 			function loadMentorList(keyword = "", sort = "name") {
@@ -229,6 +241,21 @@
 							msgInput.disabled = false;
 						}
 					});
+			}
+
+			// '메인으로' 버튼 클릭 시 main.html로 이동 (로그인 필요)
+			const goMainBtn = document.getElementById("go-main-btn");
+			if (goMainBtn) {
+				goMainBtn.onclick = function (e) {
+					e.preventDefault();
+					const token = localStorage.getItem("token");
+					if (!token) {
+						alert("로그인이 필요합니다.");
+						window.location.href = "login.html";
+						return;
+					}
+					window.location.href = "main.html";
+				};
 			}
 		</script>
 	</body>

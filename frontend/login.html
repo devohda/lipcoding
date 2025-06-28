@@ -133,7 +133,7 @@
 					// JWT 토큰을 localStorage에 저장
 					localStorage.setItem("token", result.token);
 					alert("로그인 성공!");
-					window.location.href = "profile.html";
+					window.location.href = "main.html";
 				} else {
 					document.getElementById("errorMsg").innerText =
 						result.error || "로그인 실패";

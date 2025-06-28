@@ -209,6 +209,23 @@ app.post("/api/match-requests", auth, (req, res) => {
 		}
 	);
 });
+// 멘토가 받은 매칭 요청 목록 조회
+app.get("/api/match-requests/incoming", auth, (req, res) => {
+	if (req.user.role !== "mentor")
+		return res.status(403).json({ error: "멘토만 조회할 수 있습니다." });
+	db.all(
+		`SELECT mr.id, mr.menteeId, u.name as menteeName, u.email as menteeEmail, mr.message, mr.status
+		 FROM match_requests mr
+		 JOIN users u ON mr.menteeId = u.id
+		 WHERE mr.mentorId = ?
+		 ORDER BY mr.id DESC`,
+		[req.user.sub],
+		(err, rows) => {
+			if (err) return res.status(500).json({ error: "DB error" });
+			res.json(rows);
+		}
+	);
+});
 /**
  * @swagger
  * components:
@@ -217,6 +234,195 @@ app.post("/api/match-requests", auth, (req, res) => {
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
+ */
+
+/**
+ * @swagger
+ * /api/match-requests/incoming:
+ *   get:
+ *     summary: 멘토가 받은 매칭 요청 목록 조회
+ *     tags:
+ *       - MatchRequests
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 매칭 요청 목록
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   menteeId:
+ *                     type: integer
+ *                   menteeName:
+ *                     type: string
+ *                   menteeEmail:
+ *                     type: string
+ *                   message:
+ *                     type: string
+ *                   status:
+ *                     type: string
+ *       401:
+ *         description: 인증 실패
+ *       403:
+ *         description: 멘토만 접근 가능
+ */
+
+/**
+ * @swagger
+ * /api/signup:
+ *   post:
+ *     summary: 회원가입
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: 회원가입 성공
+ *       400:
+ *         description: 잘못된 요청
+ */
+
+/**
+ * @swagger
+ * /api/login:
+ *   post:
+ *     summary: 로그인
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 로그인 성공(JWT 반환)
+ *       401:
+ *         description: 인증 실패
+ */
+
+/**
+ * @swagger
+ * /api/me:
+ *   get:
+ *     summary: 내 정보 조회
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 내 정보
+ *       401:
+ *         description: 인증 실패
+ *   patch:
+ *     summary: 내 프로필 수정
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profile:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 수정 성공
+ *       400:
+ *         description: 잘못된 요청
+ *       401:
+ *         description: 인증 실패
+ */
+
+/**
+ * @swagger
+ * /api/mentors:
+ *   get:
+ *     summary: 멘토 목록 조회
+ *     tags:
+ *       - Mentor
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: skill
+ *         schema:
+ *           type: string
+ *         description: 기술스택 필터
+ *       - in: query
+ *         name: order_by
+ *         schema:
+ *           type: string
+ *         description: 정렬 기준(name, skill)
+ *     responses:
+ *       200:
+ *         description: 멘토 목록
+ *       401:
+ *         description: 인증 실패
+ */
+
+/**
+ * @swagger
+ * /api/match-requests:
+ *   post:
+ *     summary: 매칭 요청 생성(멘티 전용)
+ *     tags:
+ *       - MatchRequests
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               mentorId:
+ *                 type: integer
+ *               menteeId:
+ *                 type: integer
+ *               message:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 요청 성공
+ *       400:
+ *         description: 잘못된 요청
+ *       403:
+ *         description: 멘티만 가능
+ *       500:
+ *         description: DB 오류
  */
 
 // 루트 접속 시 Swagger UI로 리다이렉트

@@ -150,7 +150,7 @@ Call<!DOCTYPE html>
 			};
 			function loadMentorList(keyword = "", sort = "name") {
 				const token = localStorage.getItem("token");
-				let url = "/api/mentors?";
+				let url = "http://localhost:8080/api/mentors?";
 				if (keyword) url += `skill=${encodeURIComponent(keyword)}&`;
 				if (sort) url += `order_by=${sort}`;
 				fetch(url, { headers: { Authorization: `Bearer ${token}` } })
@@ -206,7 +206,7 @@ Call<!DOCTYPE html>
 					alert("요청 메시지를 입력하세요.");
 					return;
 				}
-				fetch("/api/match-requests", {
+				fetch("http://localhost:8080/api/match-requests", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",

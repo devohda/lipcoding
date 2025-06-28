@@ -258,10 +258,16 @@
 					});
 					if (!res.ok) throw new Error("프로필 저장 실패");
 					alert("프로필이 저장되었습니다!");
+					window.location.href = "main.html";
 				} catch {
 					document.getElementById("errorMsg").innerText =
 						"프로필 저장에 실패했습니다.";
 				}
+			};
+			// '메인으로' 버튼 클릭 시 main.html로 이동
+			document.querySelector('a[href="index.html"]').onclick = function (e) {
+				e.preventDefault();
+				window.location.href = "main.html";
 			};
 		</script>
 	</body>
