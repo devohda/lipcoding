@@ -142,7 +142,7 @@
 			}
 			function acceptRequest(id) {
 				const token = localStorage.getItem("token");
-				fetch(`/api/match-requests/${id}/accept`, {
+				fetch(`http://localhost:8080/api/match-requests/${id}/accept`, {
 					method: "PUT",
 					headers: { Authorization: `Bearer ${token}` },
 				})
@@ -154,7 +154,7 @@
 			}
 			function rejectRequest(id) {
 				const token = localStorage.getItem("token");
-				fetch(`/api/match-requests/${id}/reject`, {
+				fetch(`http://localhost:8080/api/match-requests/${id}/reject`, {
 					method: "PUT",
 					headers: { Authorization: `Bearer ${token}` },
 				})

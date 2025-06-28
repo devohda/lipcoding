@@ -290,8 +290,15 @@ app.put("/api/match-requests/:id/accept", auth, (req, res) => {
 				[id],
 				function (err) {
 					if (err) return res.status(500).json({ error: "DB error" });
-					row.status = "accepted";
-					res.json(row);
+					db.get(
+						`SELECT * FROM match_requests WHERE id = ?`,
+						[id],
+						(err, updatedRow) => {
+							if (!updatedRow)
+								return res.status(404).json({ error: "Not found" });
+							res.json(updatedRow);
+						}
+					);
 				}
 			);
 		}
@@ -312,8 +319,15 @@ app.put("/api/match-requests/:id/reject", auth, (req, res) => {
 				[id],
 				function (err) {
 					if (err) return res.status(500).json({ error: "DB error" });
-					row.status = "rejected";
-					res.json(row);
+					db.get(
+						`SELECT * FROM match_requests WHERE id = ?`,
+						[id],
+						(err, updatedRow) => {
+							if (!updatedRow)
+								return res.status(404).json({ error: "Not found" });
+							res.json(updatedRow);
+						}
+					);
 				}
 			);
 		}
