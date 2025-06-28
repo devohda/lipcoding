@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>받은 매칭 요청 | 멘토-멘티 매칭 앱</title>
+		<style>
+			body {
+				font-family: "Pretendard", Arial, sans-serif;
+				background: #f7f7f7;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				background: #22223b;
+				color: #fff;
+				width: 100%;
+				padding: 2rem 0 1rem 0;
+				text-align: center;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+			}
+			h1 {
+				margin: 0;
+				font-size: 2rem;
+				letter-spacing: 2px;
+			}
+			main {
+				background: #fff;
+				margin-top: 2rem;
+				padding: 2rem 2.5rem;
+				border-radius: 1.2rem;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+				min-width: 320px;
+				max-width: 500px;
+				width: 100%;
+				text-align: center;
+			}
+			.btn {
+				background: #4ea8de;
+				color: #fff;
+				border: none;
+				border-radius: 0.5rem;
+				padding: 0.7rem 1.5rem;
+				font-size: 1rem;
+				font-weight: 600;
+				cursor: pointer;
+				margin: 0.5rem 0.3rem;
+				transition: background 0.2s;
+			}
+			.btn:hover {
+				background: #22223b;
+			}
+			.request-card {
+				border: 1px solid #eee;
+				border-radius: 1rem;
+				margin: 1rem 0;
+				padding: 1rem;
+				text-align: left;
+				background: #fafbfc;
+				position: relative;
+			}
+			.footer {
+				margin-top: auto;
+				padding: 1.5rem 0 0.5rem 0;
+				color: #aaa;
+				font-size: 0.95rem;
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>받은 매칭 요청</h1>
+		</header>
+		<main>
+			<div id="request-list"></div>
+			<div style="margin-top: 1.5rem"><a href="index.html">메인으로</a></div>
+		</main>
+		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
+		<script>
+			function parseJwt(token) {
+				try {
+					return JSON.parse(atob(token.split(".")[1]));
+				} catch {
+					return null;
+				}
+			}
+			window.onload = function () {
+				const token = localStorage.getItem("token");
+				if (!token) {
+					alert("로그인이 필요합니다.");
+					window.location.href = "login.html";
+					return;
+				}
+				const user = parseJwt(token);
+				if (!user || user.role !== "mentor") {
+					alert("멘토만 접근 가능합니다.");
+					window.location.href = "index.html";
+					return;
+				}
+				loadRequestList();
+			};
+			function loadRequestList() {
+				const token = localStorage.getItem("token");
+				fetch("/api/match-requests/incoming", {
+					headers: { Authorization: `Bearer ${token}` },
+				})
+					.then((res) => res.json())
+					.then((data) => {
+						const list = document.getElementById("request-list");
+						if (!Array.isArray(data) || data.length === 0) {
+							list.innerHTML =
+								'<div style="color:#888;">받은 요청이 없습니다.</div>';
+							return;
+						}
+						list.innerHTML = data
+							.map(
+								(req) => `
+            <div class="request-card">
+              <strong>멘티 ID: ${req.menteeId}</strong><br>
+              <span style="color:#333;">메시지: ${req.message || ""}</span><br>
+              <span style="color:#666; font-size:0.97em;">상태: ${
+								req.status
+							}</span><br>
+              <div style="margin-top:0.7rem;">
+                <button class="btn" onclick="acceptRequest(${req.id})" ${
+									req.status !== "pending" ? "disabled" : ""
+								}>수락</button>
+                <button class="btn" onclick="rejectRequest(${req.id})" ${
+									req.status !== "pending" ? "disabled" : ""
+								}>거절</button>
+              </div>
+            </div>
+          `
+							)
+							.join("");
+					});
+			}
+			function acceptRequest(id) {
+				const token = localStorage.getItem("token");
+				fetch(`/api/match-requests/${id}/accept`, {
+					method: "PUT",
+					headers: { Authorization: `Bearer ${token}` },
+				})
+					.then((res) => res.json())
+					.then(() => {
+						alert("요청을 수락했습니다.");
+						loadRequestList();
+					});
+			}
+			function rejectRequest(id) {
+				const token = localStorage.getItem("token");
+				fetch(`/api/match-requests/${id}/reject`, {
+					method: "PUT",
+					headers: { Authorization: `Bearer ${token}` },
+				})
+					.then((res) => res.json())
+					.then(() => {
+						alert("요청을 거절했습니다.");
+						loadRequestList();
+					});
+			}
+		</script>
+	</body>
+</html>

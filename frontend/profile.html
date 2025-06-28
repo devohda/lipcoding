@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>프로필 등록 | 멘토-멘티 매칭 앱</title>
+		<style>
+			body {
+				font-family: "Pretendard", Arial, sans-serif;
+				background: #f7f7f7;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				background: #22223b;
+				color: #fff;
+				width: 100%;
+				padding: 2rem 0 1rem 0;
+				text-align: center;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+			}
+			h1 {
+				margin: 0;
+				font-size: 2rem;
+				letter-spacing: 2px;
+			}
+			main {
+				background: #fff;
+				margin-top: 2rem;
+				padding: 2rem 2.5rem;
+				border-radius: 1.2rem;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+				min-width: 320px;
+				max-width: 400px;
+				width: 100%;
+				text-align: center;
+			}
+			form {
+				display: flex;
+				flex-direction: column;
+				gap: 1.1rem;
+				margin-top: 1rem;
+			}
+			input,
+			textarea,
+			select {
+				padding: 0.7rem 1rem;
+				border: 1px solid #ddd;
+				border-radius: 0.5rem;
+				font-size: 1rem;
+				outline: none;
+				transition: border 0.2s;
+			}
+			input:focus,
+			textarea:focus,
+			select:focus {
+				border: 1.5px solid #4ea8de;
+			}
+			textarea {
+				resize: vertical;
+				min-height: 80px;
+				max-height: 200px;
+			}
+			.btn {
+				background: #4ea8de;
+				color: #fff;
+				border: none;
+				border-radius: 0.5rem;
+				padding: 0.8rem 2rem;
+				font-size: 1.1rem;
+				font-weight: 600;
+				cursor: pointer;
+				margin-top: 0.5rem;
+				transition: background 0.2s;
+			}
+			.btn:hover {
+				background: #22223b;
+			}
+			.footer {
+				margin-top: auto;
+				padding: 1.5rem 0 0.5rem 0;
+				color: #aaa;
+				font-size: 0.95rem;
+				text-align: center;
+			}
+			.error {
+				color: #e63946;
+				font-size: 0.98rem;
+				margin-bottom: 0.5rem;
+			}
+			.profile-img {
+				width: 120px;
+				height: 120px;
+				border-radius: 50%;
+				object-fit: cover;
+				border: 2px solid #4ea8de;
+				margin-bottom: 1rem;
+				background: #eee;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>프로필 등록</h1>
+		</header>
+		<main>
+			<form id="profileForm">
+				<img
+					src="https://placehold.co/500x500.jpg?text=PROFILE"
+					id="profile-photo"
+					class="profile-img"
+					alt="프로필 이미지"
+				/>
+				<input type="file" id="profile" accept=".jpg,.jpeg,.png" />
+				<input type="text" id="name" name="name" placeholder="이름" required />
+				<textarea id="bio" name="bio" placeholder="소개글" required></textarea>
+				<select id="role" name="role" required>
+					<option value="">역할 선택</option>
+					<option value="mentor">멘토</option>
+					<option value="mentee">멘티</option>
+				</select>
+				<input
+					type="text"
+					id="skillsets"
+					name="skillsets"
+					placeholder="기술 스택 (멘토만 입력, 쉼표로 구분)"
+				/>
+				<button type="submit" class="btn" id="save">저장</button>
+				<div class="error" id="errorMsg"></div>
+			</form>
+			<div style="margin-top: 1.5rem">
+				<a href="index.html">메인으로</a>
+			</div>
+		</main>
+		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
+		<script>
+			// JWT 토큰에서 사용자 정보 추출
+			function parseJwt(token) {
+				try {
+					return JSON.parse(atob(token.split(".")[1]));
+				} catch {
+					return null;
+				}
+			}
+
+			// 페이지 진입 시 내 정보 불러오기
+			window.onload = async function () {
+				const token = localStorage.getItem("token");
+				if (!token) {
+					alert("로그인이 필요합니다.");
+					window.location.href = "login.html";
+					return;
+				}
+				const user = parseJwt(token);
+				if (!user) {
+					alert("잘못된 토큰입니다. 다시 로그인 해주세요.");
+					localStorage.removeItem("token");
+					window.location.href = "login.html";
+					return;
+				}
+				// 내 정보 API 호출
+				try {
+					const res = await fetch("http://localhost:8080/api/me", {
+						headers: { Authorization: "Bearer " + token },
+					});
+					if (!res.ok) throw new Error("정보 조회 실패");
+					const data = await res.json();
+					document.getElementById("name").value = data.profile.name || "";
+					document.getElementById("bio").value = data.profile.bio || "";
+					document.getElementById("role").value = data.role || "";
+					if (data.role === "mentor") {
+						document.getElementById("skillsets").value = (
+							data.profile.skills || []
+						).join(", ");
+					} else {
+						document.getElementById("skillsets").value = "";
+					}
+					// 프로필 이미지
+					if (
+						!data.profile.imageUrl ||
+						data.profile.imageUrl.startsWith("/images/mentor/") ||
+						data.profile.imageUrl.startsWith("/images/mentee/")
+					) {
+						document.getElementById("profile-photo").src =
+							data.role === "mentor"
+								? "https://placehold.co/500x500.jpg?text=MENTOR"
+								: "https://placehold.co/500x500.jpg?text=MENTEE";
+					} else {
+						document.getElementById("profile-photo").src =
+							data.profile.imageUrl;
+					}
+				} catch {
+					document.getElementById("errorMsg").innerText =
+						"프로필 정보를 불러오지 못했습니다.";
+				}
+			};
+
+			// 프로필 이미지 미리보기
+			document.getElementById("profile").onchange = function (e) {
+				const file = e.target.files[0];
+				if (!file) return;
+				if (!["image/jpeg", "image/png"].includes(file.type)) {
+					document.getElementById("errorMsg").innerText =
+						"jpg 또는 png 파일만 업로드 가능합니다.";
+					e.target.value = "";
+					return;
+				}
+				if (file.size > 1024 * 1024) {
+					document.getElementById("errorMsg").innerText =
+						"이미지 크기는 1MB 이하만 가능합니다.";
+					e.target.value = "";
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = function (ev) {
+					document.getElementById("profile-photo").src = ev.target.result;
+				};
+				reader.readAsDataURL(file);
+			};
+			// 폼 제출(임시: 실제 API 연동 필요)
+			document.getElementById("profileForm").onsubmit = async function (e) {
+				e.preventDefault();
+				const token = localStorage.getItem("token");
+				if (!token) {
+					alert("로그인이 필요합니다.");
+					window.location.href = "login.html";
+					return;
+				}
+				const name = document.getElementById("name").value;
+				const bio = document.getElementById("bio").value;
+				const role = document.getElementById("role").value;
+				const skills = document
+					.getElementById("skillsets")
+					.value.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean);
+				const imageUrl = document.getElementById("profile-photo").src;
+				const body = {
+					profile: {
+						name,
+						bio,
+						imageUrl,
+						skills: role === "mentor" ? skills : undefined,
+					},
+				};
+				try {
+					const res = await fetch("http://localhost:8080/api/me", {
+						method: "PATCH",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: "Bearer " + token,
+						},
+						body: JSON.stringify(body),
+					});
+					if (!res.ok) throw new Error("프로필 저장 실패");
+					alert("프로필이 저장되었습니다!");
+				} catch {
+					document.getElementById("errorMsg").innerText =
+						"프로필 저장에 실패했습니다.";
+				}
+			};
+		</script>
+	</body>
+</html>

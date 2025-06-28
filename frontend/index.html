@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>AC팀 멘토-멘티 매칭 앱</title>
+		<style>
+			body {
+				font-family: "Pretendard", Arial, sans-serif;
+				background: #f7f7f7;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				background: #22223b;
+				color: #fff;
+				width: 100%;
+				padding: 2rem 0 1rem 0;
+				text-align: center;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+			}
+			h1 {
+				margin: 0;
+				font-size: 2.2rem;
+				letter-spacing: 2px;
+			}
+			.ac-logo {
+				font-size: 2.5rem;
+				font-weight: bold;
+				color: #4ea8de;
+				margin-bottom: 0.5rem;
+			}
+			main {
+				background: #fff;
+				margin-top: 2rem;
+				padding: 2rem 2.5rem;
+				border-radius: 1.2rem;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+				min-width: 320px;
+				max-width: 400px;
+				width: 100%;
+				text-align: center;
+			}
+			.desc {
+				color: #22223b;
+				font-size: 1.1rem;
+				margin-bottom: 2rem;
+			}
+			.btn {
+				display: inline-block;
+				background: #4ea8de;
+				color: #fff;
+				border: none;
+				border-radius: 0.5rem;
+				padding: 0.8rem 2rem;
+				font-size: 1.1rem;
+				font-weight: 600;
+				cursor: pointer;
+				margin: 0.5rem 0;
+				transition: background 0.2s;
+			}
+			.btn:hover {
+				background: #22223b;
+			}
+			.footer {
+				margin-top: auto;
+				padding: 1.5rem 0 0.5rem 0;
+				color: #aaa;
+				font-size: 0.95rem;
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<div class="ac-logo">AC TEAM</div>
+			<h1>멘토-멘티 매칭 앱</h1>
+		</header>
+		<main>
+			<div class="desc">
+				AC팀 스타일의 심플한 CSS와 함께<br />
+				멘토-멘티 매칭 서비스를 시작해보세요!
+			</div>
+			<a href="login.html" class="btn">로그인</a>
+			<a href="signup.html" class="btn">회원가입</a>
+
+			<!-- 멘티 전용 멘토 검색/리스트/스케줄 UI -->
+			<section
+				id="mentor-search-section"
+				style="display: none; margin-top: 2rem"
+			>
+				<h2>멘토 검색</h2>
+				<div style="margin-bottom: 1rem">
+					<input
+						type="text"
+						id="mentor-search-keyword"
+						placeholder="이름 또는 기술스택"
+						style="padding: 0.5rem; width: 60%"
+					/>
+					<select id="mentor-sort">
+						<option value="name">이름순</option>
+						<option value="stack">기술스택순</option>
+					</select>
+					<button class="btn" id="mentor-search-btn">검색</button>
+				</div>
+				<div id="mentor-list"></div>
+			</section>
+		</main>
+		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
+		<script>
+			// 로그인 후 멘티일 때만 멘토 검색 UI 노출
+			window.addEventListener("DOMContentLoaded", function () {
+				const token = localStorage.getItem("token");
+				if (!token) return;
+				try {
+					const payload = JSON.parse(atob(token.split(".")[1]));
+					if (payload.role === "mentee") {
+						document.getElementById("mentor-search-section").style.display =
+							"block";
+						loadMentorList();
+						// 검색/정렬 이벤트
+						document.getElementById("mentor-search-btn").onclick = function () {
+							const keyword = document.getElementById(
+								"mentor-search-keyword"
+							).value;
+							const sort = document.getElementById("mentor-sort").value;
+							loadMentorList(keyword, sort);
+						};
+					}
+				} catch (e) {}
+			});
+
+			function loadMentorList(keyword = "", sort = "name") {
+				const token = localStorage.getItem("token");
+				fetch(
+					`/api/mentors?search=${encodeURIComponent(keyword)}&sort=${sort}`,
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					}
+				)
+					.then((res) => res.json())
+					.then((data) => {
+						const list = document.getElementById("mentor-list");
+						if (!Array.isArray(data) || data.length === 0) {
+							list.innerHTML =
+								'<div style="color:#888;">검색 결과가 없습니다.</div>';
+							return;
+						}
+						list.innerHTML = data
+							.map((mentor) => {
+								const requested =
+									window.matchRequestedMentors &&
+									window.matchRequestedMentors.includes(mentor.id);
+								return `
+			<div style="border:1px solid #eee; border-radius:1rem; margin:1rem 0; padding:1rem; text-align:left; background:#fafbfc; position:relative;">
+				<img src="${
+					mentor.profileImage || "https://placehold.co/500x500.jpg?text=MENTOR"
+				}" alt="프로필" style="width:60px; height:60px; border-radius:50%; object-fit:cover; float:left; margin-right:1rem;">
+				<strong>${
+					mentor.name
+				}</strong> <span style="color:#4ea8de; font-size:0.95em;">(${
+									mentor.stack ? mentor.stack.join(", ") : ""
+								})</span><br>
+				<span style="font-size:0.98em; color:#333;">${mentor.intro || ""}</span><br>
+				<!-- 스케줄 UI 예시 -->
+				<div style="margin-top:0.5rem;">
+					<span style="font-size:0.93em; color:#666;">상담 가능 시간: </span>
+					<span style="font-size:0.93em; color:#222;">${
+						mentor.schedule || "월~금 19:00~22:00"
+					}</span>
+				</div>
+				<!-- 매칭 요청 UI -->
+				<div style="margin-top:0.7rem; clear:both;">
+					<input type="text" id="match-msg-${
+						mentor.id
+					}" placeholder="요청 메시지" style="padding:0.4rem; width:60%; font-size:0.95em;" ${
+									requested ? "disabled" : ""
+								}>
+					<button class="btn" id="match-btn-${
+						mentor.id
+					}" style="padding:0.4rem 1.2rem; font-size:0.95em; margin-left:0.5rem;" onclick="sendMatchRequest('${
+									mentor.id
+								}')" ${requested ? "disabled" : ""}>${
+									requested ? "요청 완료" : "매칭 요청"
+								}</button>
+				</div>
+			</div>
+			`;
+							})
+							.join("");
+					});
+			}
+
+			// 매칭 요청 중복 방지용 전역 배열
+			window.matchRequestedMentors = window.matchRequestedMentors || [];
+			function sendMatchRequest(mentorId) {
+				const token = localStorage.getItem("token");
+				const msgInput = document.getElementById(`match-msg-${mentorId}`);
+				const btn = document.getElementById(`match-btn-${mentorId}`);
+				const message = msgInput ? msgInput.value : "";
+				if (!message) {
+					alert("요청 메시지를 입력하세요.");
+					return;
+				}
+				if (btn.disabled) return;
+				btn.disabled = true;
+				msgInput.disabled = true;
+				fetch(`/api/match`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify({ mentorId, message }),
+				})
+					.then((res) => res.json())
+					.then((result) => {
+						if (result && result.success) {
+							alert("매칭 요청이 전송되었습니다!");
+							window.matchRequestedMentors.push(mentorId);
+							btn.innerText = "요청 완료";
+						} else {
+							alert(result.message || "매칭 요청 실패");
+							btn.disabled = false;
+							msgInput.disabled = false;
+						}
+					});
+			}
+		</script>
+	</body>
+</html>

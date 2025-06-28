@@ -1,0 +1,229 @@
+Call<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>멘토 목록 | 멘토-멘티 매칭 앱</title>
+		<style>
+			body {
+				font-family: "Pretendard", Arial, sans-serif;
+				background: #f7f7f7;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				background: #22223b;
+				color: #fff;
+				width: 100%;
+				padding: 2rem 0 1rem 0;
+				text-align: center;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+			}
+			h1 {
+				margin: 0;
+				font-size: 2rem;
+				letter-spacing: 2px;
+			}
+			main {
+				background: #fff;
+				margin-top: 2rem;
+				padding: 2rem 2.5rem;
+				border-radius: 1.2rem;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+				min-width: 320px;
+				max-width: 500px;
+				width: 100%;
+				text-align: center;
+			}
+			.btn {
+				background: #4ea8de;
+				color: #fff;
+				border: none;
+				border-radius: 0.5rem;
+				padding: 0.7rem 1.5rem;
+				font-size: 1rem;
+				font-weight: 600;
+				cursor: pointer;
+				margin: 0.5rem 0;
+				transition: background 0.2s;
+			}
+			.btn:hover {
+				background: #22223b;
+			}
+			.mentor-card {
+				border: 1px solid #eee;
+				border-radius: 1rem;
+				margin: 1rem 0;
+				padding: 1rem;
+				text-align: left;
+				background: #fafbfc;
+				position: relative;
+				display: flex;
+				align-items: flex-start;
+				gap: 1.2rem;
+			}
+			.mentor-img {
+				width: 60px;
+				height: 60px;
+				border-radius: 50%;
+				object-fit: cover;
+				border: 2px solid #4ea8de;
+				background: #eee;
+			}
+			.footer {
+				margin-top: auto;
+				padding: 1.5rem 0 0.5rem 0;
+				color: #aaa;
+				font-size: 0.95rem;
+				text-align: center;
+			}
+			.search-bar {
+				margin-bottom: 1.2rem;
+				display: flex;
+				gap: 0.5rem;
+				justify-content: center;
+				align-items: center;
+			}
+			.search-bar input,
+			.search-bar select {
+				padding: 0.5rem;
+				border-radius: 0.4rem;
+				border: 1px solid #ddd;
+				font-size: 1rem;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>멘토 목록</h1>
+		</header>
+		<main>
+			<div class="search-bar">
+				<input
+					type="text"
+					id="mentor-search-keyword"
+					placeholder="이름 또는 기술스택"
+				/>
+				<select id="mentor-sort">
+					<option value="name">이름순</option>
+					<option value="skill">기술스택순</option>
+				</select>
+				<button class="btn" id="mentor-search-btn">검색</button>
+			</div>
+			<div id="mentor-list"></div>
+			<div style="margin-top: 1.5rem"><a href="index.html">메인으로</a></div>
+		</main>
+		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
+		<script>
+			function parseJwt(token) {
+				try {
+					return JSON.parse(atob(token.split(".")[1]));
+				} catch {
+					return null;
+				}
+			}
+			window.onload = function () {
+				const token = localStorage.getItem("token");
+				if (!token) {
+					alert("로그인이 필요합니다.");
+					window.location.href = "login.html";
+					return;
+				}
+				const user = parseJwt(token);
+				if (!user || user.role !== "mentee") {
+					alert("멘티만 접근 가능합니다.");
+					window.location.href = "index.html";
+					return;
+				}
+				loadMentorList();
+				document.getElementById("mentor-search-btn").onclick = function () {
+					const keyword = document.getElementById(
+						"mentor-search-keyword"
+					).value;
+					const sort = document.getElementById("mentor-sort").value;
+					loadMentorList(keyword, sort);
+				};
+			};
+			function loadMentorList(keyword = "", sort = "name") {
+				const token = localStorage.getItem("token");
+				let url = "/api/mentors?";
+				if (keyword) url += `skill=${encodeURIComponent(keyword)}&`;
+				if (sort) url += `order_by=${sort}`;
+				fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+					.then((res) => res.json())
+					.then((data) => {
+						const list = document.getElementById("mentor-list");
+						if (!Array.isArray(data) || data.length === 0) {
+							list.innerHTML =
+								'<div style="color:#888;">검색 결과가 없습니다.</div>';
+							return;
+						}
+						list.innerHTML = data
+							.map(
+								(mentor) => `
+      <div class="mentor-card">
+        <img src="${
+					mentor.profile.imageUrl && !mentor.profile.imageUrl.startsWith("http")
+						? "https://placehold.co/500x500.jpg?text=MENTOR"
+						: mentor.profile.imageUrl ||
+						  "https://placehold.co/500x500.jpg?text=MENTOR"
+				}" class="mentor-img" alt="프로필" />
+        <div style="flex:1;">
+          <strong>${mentor.profile.name}</strong>
+          <span style="color:#4ea8de; font-size:0.95em;">(${
+						mentor.profile.skills ? mentor.profile.skills.join(", ") : ""
+					})</span><br>
+          <span style="font-size:0.98em; color:#333;">${
+						mentor.profile.bio || ""
+					}</span><br>
+          <div style="margin-top:0.5rem; font-size:0.93em; color:#666;">상담 가능 시간: <span style="color:#222;">월~금 19:00~22:00</span></div>
+          <div style="margin-top:0.7rem;">
+            <input type="text" id="match-msg-${
+							mentor.id
+						}" placeholder="요청 메시지" style="padding:0.4rem; width:60%; font-size:0.95em;">
+            <button class="btn" style="padding:0.4rem 1.2rem; font-size:0.95em; margin-left:0.5rem;" onclick="sendMatchRequest(${
+							mentor.id
+						})">매칭 요청</button>
+          </div>
+        </div>
+      </div>
+    `
+							)
+							.join("");
+					});
+			}
+			// 매칭 요청 함수 추가
+			function sendMatchRequest(mentorId) {
+				const token = localStorage.getItem("token");
+				const user = parseJwt(token);
+				const msgInput = document.getElementById(`match-msg-${mentorId}`);
+				const message = msgInput ? msgInput.value : "";
+				if (!message) {
+					alert("요청 메시지를 입력하세요.");
+					return;
+				}
+				fetch("/api/match-requests", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify({ mentorId, menteeId: user.sub, message }),
+				})
+					.then((res) => res.json())
+					.then((result) => {
+						if (result && result.status === "pending") {
+							alert("매칭 요청이 전송되었습니다!");
+							msgInput.value = "";
+						} else {
+							alert(result.message || "매칭 요청 실패");
+						}
+					});
+			}
+		</script>
+	</body>
+</html>

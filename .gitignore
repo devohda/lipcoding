@@ -1,0 +1,25 @@
+# Node
+node_modules/
+.env
+*.log
+dist/
+build/
+.DS_Store
+# 환경별 설정 파일
+.env.*
+# 백엔드/프론트엔드 빌드 산출물
+/frontend/dist/
+/frontend/build/
+/backend/dist/
+/backend/build/
+# 기타
+*.local
+.idea/
+.vscode/
+coverage/
+# OS/에디터 임시파일
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak

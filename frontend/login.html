@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>로그인 | 멘토-멘티 매칭 앱</title>
+		<style>
+			body {
+				font-family: "Pretendard", Arial, sans-serif;
+				background: #f7f7f7;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				background: #22223b;
+				color: #fff;
+				width: 100%;
+				padding: 2rem 0 1rem 0;
+				text-align: center;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+			}
+			h1 {
+				margin: 0;
+				font-size: 2rem;
+				letter-spacing: 2px;
+			}
+			main {
+				background: #fff;
+				margin-top: 2rem;
+				padding: 2rem 2.5rem;
+				border-radius: 1.2rem;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+				min-width: 320px;
+				max-width: 400px;
+				width: 100%;
+				text-align: center;
+			}
+			form {
+				display: flex;
+				flex-direction: column;
+				gap: 1.1rem;
+				margin-top: 1rem;
+			}
+			input {
+				padding: 0.7rem 1rem;
+				border: 1px solid #ddd;
+				border-radius: 0.5rem;
+				font-size: 1rem;
+				outline: none;
+				transition: border 0.2s;
+			}
+			input:focus {
+				border: 1.5px solid #4ea8de;
+			}
+			.btn {
+				background: #4ea8de;
+				color: #fff;
+				border: none;
+				border-radius: 0.5rem;
+				padding: 0.8rem 2rem;
+				font-size: 1.1rem;
+				font-weight: 600;
+				cursor: pointer;
+				margin-top: 0.5rem;
+				transition: background 0.2s;
+			}
+			.btn:hover {
+				background: #22223b;
+			}
+			.footer {
+				margin-top: auto;
+				padding: 1.5rem 0 0.5rem 0;
+				color: #aaa;
+				font-size: 0.95rem;
+				text-align: center;
+			}
+			.error {
+				color: #e63946;
+				font-size: 0.98rem;
+				margin-bottom: 0.5rem;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>로그인</h1>
+		</header>
+		<main>
+			<form id="loginForm">
+				<input
+					type="email"
+					name="email"
+					id="email"
+					placeholder="이메일"
+					required
+				/>
+				<input
+					type="password"
+					name="password"
+					id="password"
+					placeholder="비밀번호"
+					required
+				/>
+				<button type="submit" class="btn" id="login">로그인</button>
+				<div class="error" id="errorMsg"></div>
+			</form>
+			<div style="margin-top: 1.5rem">
+				<a href="index.html">메인으로</a>
+				<span style="margin: 0 0.5rem">|</span>
+				<a href="signup.html">회원가입</a>
+			</div>
+		</main>
+		<div class="footer">&copy; 2025 AC Team. All rights reserved.</div>
+		<script>
+			document.getElementById("loginForm").onsubmit = async function (e) {
+				e.preventDefault();
+				const form = e.target;
+				const data = {
+					email: form.email.value,
+					password: form.password.value,
+				};
+				const res = await fetch("http://localhost:8080/api/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(data),
+				});
+				const result = await res.json();
+				if (res.ok) {
+					// JWT 토큰을 localStorage에 저장
+					localStorage.setItem("token", result.token);
+					alert("로그인 성공!");
+					window.location.href = "profile.html";
+				} else {
+					document.getElementById("errorMsg").innerText =
+						result.error || "로그인 실패";
+				}
+			};
+		</script>
+	</body>
+</html>
