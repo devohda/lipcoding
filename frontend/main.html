@@ -89,15 +89,28 @@
 			// 로그인 정보 표시 및 보호
 			window.addEventListener("DOMContentLoaded", function () {
 				const token = localStorage.getItem("token");
+				const btns = [
+					document.querySelector('a[href="profile.html"]'),
+					document.querySelector('a[href="mentors.html"]'),
+					document.querySelector('a[href="requests-incoming.html"]'),
+					document.getElementById("logout-btn"),
+				];
 				if (!token) {
+					btns.forEach((btn) => {
+						if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+					});
 					alert("로그인이 필요합니다.");
 					location.href = "login.html";
 					return;
 				}
 				try {
 					const payload = JSON.parse(atob(token.split(".")[1]));
+					let displayName = payload.name;
+					if (!displayName && payload.email) {
+						displayName = payload.email.split("@")[0];
+					}
 					document.getElementById("welcome").innerHTML = `<strong>${
-						payload.name || payload.email
+						displayName || "사용자"
 					}</strong>님, 환영합니다!<br><span style='color:#4ea8de;'>(${
 						payload.role === "mentor" ? "멘토" : "멘티"
 					})</span>`;
@@ -114,6 +127,9 @@
 						reqBtn.style.display = "none";
 					}
 				} catch (e) {
+					btns.forEach((btn) => {
+						if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+					});
 					alert("잘못된 토큰입니다. 다시 로그인 해주세요.");
 					localStorage.removeItem("token");
 					location.href = "login.html";

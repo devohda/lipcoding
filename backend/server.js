@@ -41,7 +41,8 @@ app.use((req, res, next) => {
 });
 app.post("/api/signup", (req, res) => {
 	const { email, password, name, role } = req.body;
-	if (!email || !password || !name || !role) {
+	const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+	if (!email || !password || !name || !role || !emailRegex.test(email)) {
 		return res.status(400).json({ error: "Invalid payload" });
 	}
 	db.get("SELECT id FROM users WHERE email = ?", [email], (err, row) => {
@@ -67,6 +68,9 @@ app.post("/api/signup", (req, res) => {
 });
 app.post("/api/login", (req, res) => {
 	const { email, password } = req.body;
+	if (!email || !password) {
+		return res.status(400).json({ error: "Invalid payload" });
+	}
 	db.get(
 		"SELECT * FROM users WHERE email = ? AND password = ?",
 		[email, password],
@@ -174,7 +178,7 @@ app.get("/api/mentors", auth, (req, res) => {
 			profile: {
 				name: user.name,
 				bio: user.bio,
-				imageUrl: user.imageUrl,
+				imageUrl: `/api/images/mentor/${user.id}`,
 				skills: JSON.parse(user.skills || "[]"),
 			},
 		}));
@@ -223,6 +227,88 @@ app.get("/api/match-requests/incoming", auth, (req, res) => {
 		(err, rows) => {
 			if (err) return res.status(500).json({ error: "DB error" });
 			res.json(rows);
+		}
+	);
+});
+// 멘티가 보낸 매칭 요청 목록 조회
+app.get("/api/match-requests/outgoing", auth, (req, res) => {
+	if (req.user.role !== "mentee")
+		return res.status(403).json({ error: "멘티만 조회할 수 있습니다." });
+	db.all(
+		`SELECT mr.id, mr.mentorId, mr.menteeId, mr.status
+		 FROM match_requests mr
+		 WHERE mr.menteeId = ?
+		 ORDER BY mr.id DESC`,
+		[req.user.sub],
+		(err, rows) => {
+			if (err) return res.status(500).json({ error: "DB error" });
+			res.json(rows);
+		}
+	);
+});
+// 매칭 요청 수락 (멘토 전용)
+app.put("/api/match-requests/:id/accept", auth, (req, res) => {
+	if (req.user.role !== "mentor")
+		return res.status(403).json({ error: "멘토만 수락할 수 있습니다." });
+	const { id } = req.params;
+	db.get(
+		`SELECT * FROM match_requests WHERE id = ? AND mentorId = ?`,
+		[id, req.user.sub],
+		(err, row) => {
+			if (!row) return res.status(404).json({ error: "Not found" });
+			db.run(
+				`UPDATE match_requests SET status = 'accepted' WHERE id = ?`,
+				[id],
+				function (err) {
+					if (err) return res.status(500).json({ error: "DB error" });
+					row.status = "accepted";
+					res.json(row);
+				}
+			);
+		}
+	);
+});
+// 매칭 요청 거절 (멘토 전용)
+app.put("/api/match-requests/:id/reject", auth, (req, res) => {
+	if (req.user.role !== "mentor")
+		return res.status(403).json({ error: "멘토만 거절할 수 있습니다." });
+	const { id } = req.params;
+	db.get(
+		`SELECT * FROM match_requests WHERE id = ? AND mentorId = ?`,
+		[id, req.user.sub],
+		(err, row) => {
+			if (!row) return res.status(404).json({ error: "Not found" });
+			db.run(
+				`UPDATE match_requests SET status = 'rejected' WHERE id = ?`,
+				[id],
+				function (err) {
+					if (err) return res.status(500).json({ error: "DB error" });
+					row.status = "rejected";
+					res.json(row);
+				}
+			);
+		}
+	);
+});
+// 매칭 요청 삭제/취소 (멘티 전용)
+app.delete("/api/match-requests/:id", auth, (req, res) => {
+	if (req.user.role !== "mentee")
+		return res.status(403).json({ error: "멘티만 취소할 수 있습니다." });
+	const { id } = req.params;
+	db.get(
+		`SELECT * FROM match_requests WHERE id = ? AND menteeId = ?`,
+		[id, req.user.sub],
+		(err, row) => {
+			if (!row) return res.status(404).json({ error: "Not found" });
+			db.run(
+				`UPDATE match_requests SET status = 'cancelled' WHERE id = ?`,
+				[id],
+				function (err) {
+					if (err) return res.status(500).json({ error: "DB error" });
+					row.status = "cancelled";
+					res.json(row);
+				}
+			);
 		}
 	);
 });
@@ -425,6 +511,37 @@ app.get("/api/match-requests/incoming", auth, (req, res) => {
  *         description: DB 오류
  */
 
+/**
+ * @swagger
+ * /api/images/{role}/{id}:
+ *   get:
+ *     summary: 프로필 이미지 제공
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: role
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 사용자 역할 (mentor, mentee)
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 사용자 ID
+ *     responses:
+ *       302:
+ *         description: 이미지 리다이렉트
+ *       400:
+ *         description: 잘못된 요청
+ *       401:
+ *         description: 인증 실패
+ */
+
 // 루트 접속 시 Swagger UI로 리다이렉트
 app.get("/", (req, res) => {
 	res.redirect("/api-docs");
@@ -446,6 +563,73 @@ function escapeHtml(str) {
 		.replace(/'/g, "&#39;");
 }
 
+// 프로필 이미지 제공 (임시: placeholder)
+app.get("/api/images/:role/:id", auth, (req, res) => {
+	const { role, id } = req.params;
+	// 실제 구현에서는 DB에서 파일 경로를 조회하거나, 파일 시스템에서 이미지를 읽어야 함
+	// 여기서는 임시로 placeholder 이미지를 반환
+	if (role !== "mentor" && role !== "mentee") {
+		return res.status(400).json({ error: "Invalid role" });
+	}
+	const url =
+		role === "mentor"
+			? "https://placehold.co/500x500.jpg?text=MENTOR"
+			: "https://placehold.co/500x500.jpg?text=MENTEE";
+	res.redirect(url);
+});
+
+// 프로필 수정 (PUT /api/profile)
+app.put("/api/profile", auth, (req, res) => {
+	const { id, name, role, bio, image, skills } = req.body;
+	if (!id || !name || !role || !bio) {
+		return res.status(400).json({ error: "Invalid payload" });
+	}
+	if (String(req.user.sub) !== String(id)) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
+	let imageUrl = `/api/images/${role}/${id}`;
+	let skillsStr = null;
+	if (role === "mentor") {
+		skillsStr = Array.isArray(skills) ? JSON.stringify(skills) : "[]";
+	}
+	db.run(
+		"UPDATE users SET name = ?, bio = ?, imageUrl = ?, skills = ? WHERE id = ?",
+		[
+			escapeHtml(name),
+			escapeHtml(bio),
+			imageUrl,
+			role === "mentor" ? skillsStr : null,
+			id,
+		],
+		function (err) {
+			if (err) return res.status(500).json({ error: "DB error" });
+			db.get("SELECT * FROM users WHERE id = ?", [id], (err, user) => {
+				if (!user) return res.status(500).json({ error: "Not found" });
+				const profile = {
+					name: user.name,
+					bio: user.bio,
+					imageUrl: `/api/images/${user.role}/${user.id}`,
+				};
+				if (user.role === "mentor") {
+					profile.skills = JSON.parse(user.skills || "[]");
+				}
+				res.json({
+					id: user.id,
+					email: user.email,
+					role: user.role,
+					profile,
+				});
+			});
+		}
+	);
+});
+
 app.listen(PORT, () => {
 	console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+// 404 Not Found 핸들러 (가장 마지막에 추가)
+app.use((req, res, next) => {
+	console.log("404 Not Found:", req.method, req.originalUrl);
+	res.status(404).json({ error: "Not Found" });
 });
