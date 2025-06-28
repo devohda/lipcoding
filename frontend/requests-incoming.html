@@ -106,7 +106,7 @@
 			};
 			function loadRequestList() {
 				const token = localStorage.getItem("token");
-				fetch("/api/match-requests/incoming", {
+				fetch("http://localhost:8080/api/match-requests/incoming", {
 					headers: { Authorization: `Bearer ${token}` },
 				})
 					.then((res) => res.json())
